@@ -33,6 +33,13 @@ class JiraClient
     protected $http_response;
 
     /**
+     * response headers.
+     *
+     * @var array
+     */
+    protected $response_headers = [];
+
+    /**
      * JIRA REST API URI.
      *
      * @var string
@@ -270,6 +277,7 @@ class JiraClient
         );
 
         curl_setopt($ch, CURLOPT_VERBOSE, $this->getConfiguration()->isCurlOptVerbose());
+        curl_setopt($ch, CURLOPT_HEADERFUNCTION, [$this, 'handleHeaders']);
 
         // Add proxy settings to the curl.
         $this->proxyConfigCurlHandle($ch);
@@ -688,6 +696,27 @@ class JiraClient
     }
 
     /**
+     * Read and parse response headers
+     *
+     * @param resource $ch
+     * @param string $header
+     * @return int
+     */
+    private function handleHeaders($ch, $header)
+    {
+        $len = strlen($header);
+        $header = explode(':', $header, 2);
+
+        if (count($header) < 2) { // ignore invalid headers
+            return $len;
+        }
+
+        $this->response_headers[strtolower(trim($header[0]))][] = trim($header[1]);
+
+        return $len;
+    }
+
+    /**
      * setting REST API url to V3.
      *
      * @return $this
@@ -731,5 +760,15 @@ class JiraClient
     public function getJsonOptions()
     {
         return $this->jsonOptions;
+    }
+
+    /**
+     * get response headers
+     *
+     * @return array
+     */
+    public function getResponseHeaders()
+    {
+        return $this->response_headers;
     }
 }
